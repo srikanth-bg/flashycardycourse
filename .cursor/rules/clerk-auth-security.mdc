@@ -1,0 +1,179 @@
+---
+alwaysApply: true
+---
+# Clerk Authentication & Data Access Security
+
+This project uses **Clerk** for authentication and user management.
+
+## Critical Security Rules
+
+### 🔒 Data Access Control
+**ALWAYS enforce user data isolation. Users must NEVER access data belonging to other users.**
+
+1. **Always get the current user**: Use Clerk's `auth()` helper to get the authenticated user
+   ```typescript
+   import { auth } from "@clerk/nextjs/server";
+   
+   const { userId } = await auth();
+   if (!userId) {
+     return new Response("Unauthorized", { status: 401 });
+   }
+   ```
+
+2. **Filter ALL queries by userId**: Every database query for user-owned resources MUST include userId filter
+   ```typescript
+   // ✅ CORRECT - Filtered by userId
+   const decks = await db
+     .select()
+     .from(decksTable)
+     .where(eq(decksTable.userId, userId));
+   
+   // ❌ WRONG - Missing userId filter, exposes all users' data
+   const decks = await db.select().from(decksTable);
+   ```
+
+3. **Verify ownership before updates/deletes**: Always check that the resource belongs to the user
+   ```typescript
+   // First verify the deck belongs to the user
+   const [deck] = await db
+     .select()
+     .from(decksTable)
+     .where(and(
+       eq(decksTable.id, deckId),
+       eq(decksTable.userId, userId)
+     ));
+   
+   if (!deck) {
+     return new Response("Not found or unauthorized", { status: 404 });
+   }
+   
+   // Then perform the update/delete
+   await db.delete(decksTable).where(eq(decksTable.id, deckId));
+   ```
+
+4. **Check ownership through relations**: When accessing cards, verify the parent deck belongs to the user
+   ```typescript
+   // Verify card belongs to user's deck
+   const result = await db
+     .select()
+     .from(cardsTable)
+     .leftJoin(decksTable, eq(cardsTable.deckId, decksTable.id))
+     .where(and(
+       eq(cardsTable.id, cardId),
+       eq(decksTable.userId, userId)
+     ));
+   ```
+
+## Authentication Patterns
+
+### Server Components
+```typescript
+import { auth } from "@clerk/nextjs/server";
+
+export default async function MyPage() {
+  const { userId } = await auth();
+  
+  if (!userId) {
+    redirect("/sign-in");
+  }
+  
+  // Fetch user's data only
+  const userDecks = await db
+    .select()
+    .from(decksTable)
+    .where(eq(decksTable.userId, userId));
+  
+  return <div>...</div>;
+}
+```
+
+### API Routes (Route Handlers)
+```typescript
+import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(request: NextRequest) {
+  const { userId } = await auth();
+  
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  
+  // Always filter by userId
+  const data = await db
+    .select()
+    .from(decksTable)
+    .where(eq(decksTable.userId, userId));
+  
+  return NextResponse.json(data);
+}
+```
+
+### Server Actions
+```typescript
+"use server";
+
+import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
+
+export async function createDeck(formData: FormData) {
+  const { userId } = await auth();
+  
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
+  
+  const name = formData.get("name") as string;
+  
+  const [newDeck] = await db
+    .insert(decksTable)
+    .values({ userId, name })
+    .returning();
+  
+  revalidatePath("/decks");
+  return newDeck;
+}
+```
+
+## Security Checklist
+
+Before implementing any data access feature, verify:
+
+- [ ] User authentication is checked using `auth()` from Clerk
+- [ ] Unauthorized requests return 401 status
+- [ ] All queries for user-owned resources filter by `userId`
+- [ ] Update/delete operations verify ownership first
+- [ ] Related resources (cards → decks) check parent ownership
+- [ ] No queries expose data from other users
+- [ ] API routes and server actions are protected
+
+## Never Do This
+
+- ❌ Don't skip userId authentication checks
+- ❌ Don't query data without filtering by userId
+- ❌ Don't trust client-provided userId values (always use Clerk's auth())
+- ❌ Don't expose data in error messages that could leak information
+- ❌ Don't use route parameters as the only authorization check
+- ❌ Don't assume middleware alone is sufficient (always check in handlers)
+
+## Clerk Integration
+
+- Authentication middleware: [src/middleware.ts](mdc:src/middleware.ts)
+- Layout with ClerkProvider: [src/app/layout.tsx](mdc:src/app/layout.tsx)
+- Database schema with userId: [src/db/schema.ts](mdc:src/db/schema.ts)
+
+## Important Files
+
+- [src/middleware.ts](mdc:src/middleware.ts) - Clerk middleware configuration
+- [src/app/layout.tsx](mdc:src/app/layout.tsx) - ClerkProvider setup
+- [src/db/schema.ts](mdc:src/db/schema.ts) - Schema with userId fields
+
+## Best Practices
+
+- ✅ Always use `auth()` from "@clerk/nextjs/server" to get userId
+- ✅ Return 401 for unauthenticated requests, 404 for unauthorized resource access
+- ✅ Filter every query by userId for user-owned resources
+- ✅ Verify ownership before any update/delete operation
+- ✅ Use `and()` operator to combine userId check with other conditions
+- ✅ Document which resources are user-specific vs public
+- ✅ Test authorization by attempting to access other users' data

@@ -1,0 +1,103 @@
+---
+alwaysApply: true
+description: Guidelines for database interactions using Drizzle ORM
+---
+
+# Drizzle Database Guidelines
+
+This project uses **Drizzle ORM** for all database interactions.
+
+## Important Files
+
+- [src/db/schema.ts](mdc:src/db/schema.ts) - Database schema definitions
+- [src/db/index.ts](mdc:src/db/index.ts) - Database connection instance
+
+## Database Schema
+
+The database consists of two main tables:
+
+### Decks Table (`decksTable`)
+- `id`: Auto-incrementing primary key
+- `userId`: Clerk user ID (varchar 255)
+- `name`: Deck name (varchar 255)
+- `description`: Optional text description
+- `createdAt`: Timestamp (auto-generated)
+- `updatedAt`: Timestamp (auto-generated)
+
+### Cards Table (`cardsTable`)
+- `id`: Auto-incrementing primary key
+- `deckId`: Foreign key to decks table (cascade delete)
+- `front`: Question/prompt text
+- `back`: Answer text
+- `createdAt`: Timestamp (auto-generated)
+- `updatedAt`: Timestamp (auto-generated)
+
+## Usage Guidelines
+
+1. **Always import from schema**: Import table definitions from `@/db/schema`
+   ```typescript
+   import { decksTable, cardsTable } from "@/db/schema";
+   import { db } from "@/db";
+   ```
+
+2. **Use Drizzle query methods**: Use Drizzle's type-safe query builders
+   ```typescript
+   // SELECT
+   const decks = await db.select().from(decksTable).where(eq(decksTable.userId, userId));
+   
+   // INSERT
+   const [newDeck] = await db.insert(decksTable).values({ userId, name, description }).returning();
+   
+   // UPDATE
+   await db.update(decksTable).set({ name, updatedAt: new Date() }).where(eq(decksTable.id, deckId));
+   
+   // DELETE
+   await db.delete(decksTable).where(eq(decksTable.id, deckId));
+   ```
+
+3. **Use type-safe operators**: Import comparison operators from `drizzle-orm`
+   ```typescript
+   import { eq, and, or, desc, asc } from "drizzle-orm";
+   ```
+
+4. **Handle relations properly**: When querying cards with decks, use joins or relational queries
+   ```typescript
+   const cardsWithDeck = await db
+     .select()
+     .from(cardsTable)
+     .leftJoin(decksTable, eq(cardsTable.deckId, decksTable.id))
+     .where(eq(decksTable.userId, userId));
+   ```
+
+5. **Always filter by userId**: Ensure users can only access their own data
+   ```typescript
+   // Always include userId check for user-owned resources
+   const userDecks = await db
+     .select()
+     .from(decksTable)
+     .where(eq(decksTable.userId, userId));
+   ```
+
+6. **Use returning() for inserts/updates**: Get the updated/inserted data back
+   ```typescript
+   const [updated] = await db
+     .update(decksTable)
+     .set({ name: newName })
+     .where(eq(decksTable.id, deckId))
+     .returning();
+   ```
+
+## Never Do This
+
+- ❌ Don't use raw SQL queries without Drizzle's sql operator
+- ❌ Don't bypass the schema types
+- ❌ Don't forget to filter by userId for user-owned data
+- ❌ Don't forget cascade behavior (deleting a deck will delete its cards)
+
+## Best Practices
+
+- ✅ Always use TypeScript types inferred from the schema
+- ✅ Use transactions for multi-step operations
+- ✅ Handle errors appropriately with try-catch blocks
+- ✅ Validate user ownership before updates/deletes
+- ✅ Use `.returning()` to get inserted/updated data in one query
