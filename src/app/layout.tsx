@@ -2,14 +2,12 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import {
   ClerkProvider,
-  SignInButton,
-  SignUpButton,
   SignedIn,
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
-import { Button } from "@/components/ui/button";
+import { AuthButtons } from "@/components/auth-buttons";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -42,12 +40,7 @@ export default function RootLayout({
             <div className="text-xl font-semibold">Flashy Cardy Course</div>
             <div className="flex items-center gap-4">
               <SignedOut>
-                <SignInButton mode="modal">
-                  <Button variant="secondary">Sign In</Button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <Button variant="outline">Sign Up</Button>
-                </SignUpButton>
+                <AuthButtons className="flex gap-4" />
               </SignedOut>
               <SignedIn>
                 <UserButton />

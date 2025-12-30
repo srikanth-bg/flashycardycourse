@@ -69,12 +69,13 @@ This project uses **Clerk** for authentication and user management.
 ### Server Components
 ```typescript
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 export default async function MyPage() {
   const { userId } = await auth();
   
   if (!userId) {
-    redirect("/sign-in");
+    redirect("/"); // Redirect to homepage where sign-in/sign-up modals are available
   }
   
   // Fetch user's data only

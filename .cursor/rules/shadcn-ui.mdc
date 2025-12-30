@@ -7,6 +7,22 @@ description: Guidelines for using shadcn/ui components in this project
 
 This project uses **shadcn/ui** for all UI elements and components.
 
+## 🚨 CRITICAL RULES - NO EXCEPTIONS
+
+### ONLY shadcn/ui Components
+**ABSOLUTELY NO custom UI components should be created in this project.**
+
+- ❌ **NEVER** create custom buttons, inputs, cards, dialogs, or any UI elements from scratch
+- ❌ **NEVER** write custom styled components when a shadcn/ui equivalent exists
+- ❌ **NEVER** use plain HTML elements like `<button>`, `<input>`, `<dialog>` for UI
+- ✅ **ALWAYS** use shadcn/ui components from `@/components/ui/`
+- ✅ **ALWAYS** install missing shadcn/ui components rather than creating custom ones
+
+**If you need a UI element:**
+1. First, check if shadcn/ui has it: https://ui.shadcn.com/docs/components
+2. Install it with `npx shadcn@latest add [component-name]`
+3. Use the installed component from `@/components/ui/`
+
 ## Important Files
 
 - [components.json](mdc:components.json) - shadcn/ui configuration
@@ -31,14 +47,102 @@ Examples:
 - `npx shadcn@latest add card`
 - `npx shadcn@latest add dialog`
 - `npx shadcn@latest add input`
+- `npx shadcn@latest add form`
+
+### Troubleshooting Component Installation
+**If you encounter issues installing a component:**
+1. Ask the user to run the installation command manually in their terminal
+2. Wait for the user to confirm the installation is complete
+3. Continue with the task once confirmed
+
+Example message:
+> "I need to install the [component-name] component but encountered an issue. Please run the following command in your terminal and let me know when it's complete:
+> 
+> `npx shadcn@latest add [component-name]`"
 
 ## Usage Guidelines
 
-1. **Always use shadcn/ui components** for UI elements instead of creating custom components from scratch
-2. **Check if a component exists** in the shadcn/ui library before installing
+1. **MANDATORY: Use shadcn/ui components ONLY** - No exceptions, no custom UI components
+2. **Check if a component exists** in the shadcn/ui library before proceeding
 3. **Components are located** in `src/components/ui/` after installation
 4. **Import components** from `@/components/ui/[component-name]`
 5. **Use the cn() utility** from `@/lib/utils` for conditional className merging
+
+## Clerk Authentication Integration
+
+**MANDATORY: Clerk must use shadcn/ui components with modals**
+
+### Sign In / Sign Up Buttons
+- ✅ **ALWAYS** use shadcn/ui `Button` component for Clerk sign-in/sign-up triggers
+- ❌ **NEVER** use Clerk's default `<SignInButton>` or `<SignUpButton>` components
+- ❌ **NEVER** use separate sign-in/sign-up pages (use modals instead)
+
+### Required Components
+Install these shadcn/ui components for Clerk integration:
+```bash
+npx shadcn@latest add button
+npx shadcn@latest add dialog
+```
+
+### Implementation Example
+```tsx
+"use client";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { SignIn, SignUp } from "@clerk/nextjs";
+
+export function AuthButtons() {
+  return (
+    <div className="flex gap-4">
+      {/* Sign In Modal */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline">Sign In</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign In</DialogTitle>
+            <DialogDescription>
+              Sign in to your account to continue
+            </DialogDescription>
+          </DialogHeader>
+          <SignIn routing="hash" />
+        </DialogContent>
+      </Dialog>
+
+      {/* Sign Up Modal */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button>Sign Up</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Account</DialogTitle>
+            <DialogDescription>
+              Create a new account to get started
+            </DialogDescription>
+          </DialogHeader>
+          <SignUp routing="hash" />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+```
+
+**Key Points for Clerk Integration:**
+- Use `routing="hash"` on `<SignIn>` and `<SignUp>` components for modal usage
+- Wrap shadcn/ui Dialog triggers with `asChild` prop
+- Use shadcn/ui Button variants for different styles (`outline`, `default`, `ghost`, etc.)
+- Keep authentication UI in modals, not separate pages
 
 ## Example Usage
 
@@ -76,3 +180,54 @@ Common shadcn/ui components include:
 - And many more...
 
 For a complete list, visit: https://ui.shadcn.com/docs/components
+
+## ❌ Never Do This
+
+- **NEVER create custom UI components** - Always use shadcn/ui equivalents
+- **NEVER use plain HTML elements for UI** - Use shadcn/ui components instead
+- **NEVER use Clerk's default auth buttons** - Use shadcn/ui Button + Dialog
+- **NEVER create separate sign-in/sign-up pages** - Use modals with shadcn/ui Dialog
+- **NEVER write custom styled divs/buttons/inputs** - Install the shadcn/ui component
+- **NEVER ignore shadcn/ui when building UI** - It's mandatory for ALL UI elements
+- **NEVER use `<button>` directly** - Use `<Button>` from shadcn/ui
+- **NEVER use `<input>` directly** - Use `<Input>` from shadcn/ui
+- **NEVER use `<dialog>` directly** - Use `<Dialog>` from shadcn/ui
+
+## ✅ Always Do This
+
+- **ALWAYS check shadcn/ui first** before building any UI element
+- **ALWAYS install missing components** with `npx shadcn@latest add [component]`
+- **ALWAYS use shadcn/ui components** from `@/components/ui/`
+- **ALWAYS use the cn() utility** for className merging
+- **ALWAYS use shadcn/ui Button** for Clerk authentication triggers
+- **ALWAYS use shadcn/ui Dialog** for Clerk modals
+- **ALWAYS set `routing="hash"`** on Clerk components in modals
+- **ALWAYS use `asChild` prop** when wrapping shadcn/ui components as triggers
+- **ALWAYS prefer existing components** over creating new ones
+- **ALWAYS maintain consistency** by using the same component library throughout
+- This project is in dark mode. So make sure there are no dark colored text on dark backgrounds (and vice versa)
+
+## Component Installation Checklist
+
+Before creating any UI, verify these components are installed:
+
+**Core Components (Install First):**
+- [ ] `button` - For all clickable actions
+- [ ] `input` - For text inputs
+- [ ] `card` - For content containers
+- [ ] `form` - For form handling with validation
+
+**Install as Needed:**
+```bash
+npx shadcn@latest add button dialog input card form label select textarea checkbox radio-group switch table tabs badge avatar separator skeleton toast
+```
+
+## Enforcement
+
+This is not a suggestion - it is a **strict requirement**. Any code review or PR should reject:
+- Custom UI components when shadcn/ui alternatives exist
+- Direct use of HTML elements for UI (`<button>`, `<input>`, `<dialog>`, etc.)
+- Clerk auth buttons that don't use shadcn/ui components
+- Separate auth pages instead of modal-based authentication
+
+**Remember: If you're writing UI code, you should be importing from `@/components/ui/`**
