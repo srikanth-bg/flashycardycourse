@@ -7,7 +7,7 @@
 
 import { db } from "@/db";
 import { decksTable, cardsTable } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 
 // ============================================
 // READ OPERATIONS
@@ -23,6 +23,21 @@ export async function getUserDecks(userId: string) {
     .select()
     .from(decksTable)
     .where(eq(decksTable.userId, userId));
+}
+
+/**
+ * Get the count of decks for a user
+ * Used to enforce deck limits for free users
+ * @param userId - The authenticated user's ID
+ * @returns The number of decks the user has
+ */
+export async function getUserDeckCount(userId: string): Promise<number> {
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(decksTable)
+    .where(eq(decksTable.userId, userId));
+  
+  return result[0]?.count ?? 0;
 }
 
 /**
@@ -45,6 +60,7 @@ export async function getDeckById(deckId: number, userId: string) {
 
 /**
  * Get all cards for a specific deck (with user ownership check)
+ * Sorted by updatedAt date (latest first)
  * @param deckId - The deck ID
  * @param userId - The authenticated user's ID
  * @returns Array of cards if deck is owned by user, null if unauthorized
@@ -57,7 +73,8 @@ export async function getDeckCards(deckId: number, userId: string) {
   return await db
     .select()
     .from(cardsTable)
-    .where(eq(cardsTable.deckId, deckId));
+    .where(eq(cardsTable.deckId, deckId))
+    .orderBy(desc(cardsTable.updatedAt));
 }
 
 // ============================================

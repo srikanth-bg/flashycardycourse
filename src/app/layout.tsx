@@ -7,6 +7,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
+import { Toaster } from "@/components/ui/sonner";
 import { AuthButtons } from "@/components/auth-buttons";
 import "./globals.css";
 
@@ -48,6 +49,7 @@ export default function RootLayout({
             </div>
           </header>
           {children}
+          <Toaster richColors position="top-right" />
         </body>
       </html>
     </ClerkProvider>

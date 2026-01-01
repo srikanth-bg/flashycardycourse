@@ -125,6 +125,7 @@ export async function updateCardForUser(
  * Delete a card (with user ownership check via deck)
  * @param cardId - The card ID
  * @param userId - The authenticated user's ID
+ * @returns The deleted card
  * @throws Error if card not found or user is not the owner
  */
 export async function deleteCardForUser(cardId: number, userId: string) {
@@ -134,7 +135,8 @@ export async function deleteCardForUser(cardId: number, userId: string) {
     throw new Error("Card not found or unauthorized");
   }
   
-  await db.delete(cardsTable).where(eq(cardsTable.id, cardId));
+  const [deleted] = await db.delete(cardsTable).where(eq(cardsTable.id, cardId)).returning();
+  return deleted;
 }
 
 /**
@@ -151,5 +153,39 @@ export async function deleteAllCardsInDeck(deckId: number, userId: string) {
   }
   
   await db.delete(cardsTable).where(eq(cardsTable.deckId, deckId));
+}
+
+/**
+ * Create multiple cards for a deck (used for AI generation)
+ * @param deckId - The deck ID to add cards to
+ * @param userId - The authenticated user's ID
+ * @param cards - Array of card data (front, back)
+ * @returns Array of created cards
+ * @throws Error if deck not found or user is not the owner
+ */
+export async function createCardsForDeck(
+  deckId: number,
+  userId: string,
+  cards: Array<{ front: string; back: string }>
+) {
+  // Verify deck ownership
+  const deck = await getDeckById(deckId, userId);
+  if (!deck) {
+    throw new Error("Deck not found or unauthorized");
+  }
+
+  // Insert all cards in a single query
+  const created = await db
+    .insert(cardsTable)
+    .values(
+      cards.map(card => ({
+        deckId,
+        front: card.front,
+        back: card.back,
+      }))
+    )
+    .returning();
+
+  return created;
 }
 
