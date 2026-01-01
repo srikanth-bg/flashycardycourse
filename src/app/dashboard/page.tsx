@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUserDecks, getUserDeckCount } from "@/db/queries/deck-queries";
+import { getUserDecksWithCardCount } from "@/db/queries/deck-queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateDeckDialog } from "@/components/create-deck-dialog";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,8 @@ export default async function DashboardPage() {
   // Check if user has unlimited decks feature (Pro plan)
   const hasUnlimitedDecks = has({ feature: 'unlimited_decks' });
   
-  // Fetch user's decks using query function from db/queries
-  const decks = await getUserDecks(userId);
+  // Fetch user's decks with card counts using query function from db/queries
+  const decks = await getUserDecksWithCardCount(userId);
   const deckCount = decks.length;
   
   // Determine if user can create more decks
@@ -61,7 +61,12 @@ export default async function DashboardPage() {
                     {deck.description || "No description provided"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow">
+                <CardContent className="flex-grow space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {deck.cardCount} {deck.cardCount === 1 ? 'card' : 'cards'}
+                    </span>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Updated: {new Date(deck.updatedAt).toLocaleDateString()}
                   </p>

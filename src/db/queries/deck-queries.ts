@@ -26,6 +26,31 @@ export async function getUserDecks(userId: string) {
 }
 
 /**
+ * Get all decks for a specific user with card counts
+ * @param userId - The authenticated user's ID
+ * @returns Array of user's decks with cardCount property
+ */
+export async function getUserDecksWithCardCount(userId: string) {
+  const decks = await db
+    .select({
+      id: decksTable.id,
+      userId: decksTable.userId,
+      name: decksTable.name,
+      description: decksTable.description,
+      createdAt: decksTable.createdAt,
+      updatedAt: decksTable.updatedAt,
+      cardCount: sql<number>`count(${cardsTable.id})::int`,
+    })
+    .from(decksTable)
+    .leftJoin(cardsTable, eq(decksTable.id, cardsTable.deckId))
+    .where(eq(decksTable.userId, userId))
+    .groupBy(decksTable.id)
+    .orderBy(desc(decksTable.updatedAt));
+  
+  return decks;
+}
+
+/**
  * Get the count of decks for a user
  * Used to enforce deck limits for free users
  * @param userId - The authenticated user's ID
